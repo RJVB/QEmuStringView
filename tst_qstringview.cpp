@@ -444,7 +444,9 @@ void TESTCLASS::literals() const
     }
 
     // these are different results
-    qWarning() << "QStringView(withnull)=" << QStringView(withnull);
+    QStringView *swn = new QStringView(withnull);
+    qWarning() << "QStringView(withnull)=" << swn;
+    delete swn;
     QCOMPARE(size_t(QStringView(withnull).size()), sizeof(withnull)/sizeof(withnull[0]) - 1);
     QCOMPARE(QStringView(withnull + 0).size(), 1);
 }

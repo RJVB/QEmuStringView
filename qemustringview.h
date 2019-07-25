@@ -44,6 +44,7 @@
 #define QEMUSTRINGVIEW_H
 
 #include <QString>
+class QStringView;
 
 #if defined(QSTRINGVIEW_H) && defined(QSTRINGVIEW_EMULATE)
 #warning "QEmuStringView will override Qt's QStringView class!"
@@ -203,6 +204,9 @@ public:
     template <typename T>
     using if_compatible_qstring_like = typename std::enable_if<std::is_same<T, QString>::value || std::is_same<T, QStringRef>::value, bool>::type;
 
+    template <typename T>
+    using if_compatible_qstringview_like = typename std::enable_if<std::is_same<T, QStringView>::value || std::is_same<T, QEmuStringView>::value, bool>::type;
+
     template <typename Char, size_t N>
     static Q_DECL_CONSTEXPR qsizetype lengthHelperArray(const Char (&)[N]) Q_DECL_NOTHROW
     {
@@ -349,6 +353,11 @@ template <typename StdBasicString, if_compatible_string<StdBasicString> = true>
     {
         return m_isNull ? nullptr :
             m_hasData ? static_cast<const QChar*>(m_data) :QString::constData();
+    }
+
+    const ushort *utf16() const
+    {
+        return (m_isNull || isNull()) ? nullptr : QString::utf16();
     }
 
     char *toPrettyUnicode() const
@@ -530,6 +539,14 @@ inline bool operator>=(const std::basic_string<Char> lhs, QEmuStringView rhs) Q_
 #undef QStringViewLiteral
 #define QStringViewLiteral(str) QStringView(QStringLiteral(str))
 #endif
+
+// added by RJVB
+template <typename String, QEmuStringView::if_compatible_qstringview_like<String> = true>
+inline QDebug operator << (QDebug d, const String* q)
+{
+    d.nospace() << "QStringView*(" << q->toString() << ")";
+    return d.space();
+}
 
 #endif // QEMUSTRINGVIEW_H
 
