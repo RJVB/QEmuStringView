@@ -241,7 +241,7 @@ public:
     inline QEmuStringView()
         : QString() {}
     QEmuStringView(std::nullptr_t) Q_DECL_NOTHROW
-        : QString() {}
+        : QString(), m_isNull(true) {}
     inline QEmuStringView(const QString &that)
     {
         *this = that;
@@ -252,36 +252,44 @@ public:
             *this = *that;
         } else {
             clear();
+            m_isNull = true;
         }
     }
 
 //     inline QEmuStringView(const QChar *str, qsizetype len=-1)
 //         : QString(str,len) {}
-    template <typename Char, if_compatible_char<Char> = true>
+template <typename Char, if_compatible_char<Char> = true>
     inline Q_DECL_CONSTEXPR QEmuStringView(const Char *str, qsizetype len)
-        : QString(castHelper(str),len) {}
-    template <typename Char, if_compatible_char<Char> = true>
+        : QString(castHelper(str),len), m_isNull(str==nullptr)
+        , m_hasData(true), m_data(str) {}
+template <typename Char, if_compatible_char<Char> = true>
     inline Q_DECL_CONSTEXPR QEmuStringView(const Char *f, const Char *l)
         : QEmuStringView(f, l - f) {}
-    template <typename Array, if_compatible_array<Array> = true>
+template <typename Array, if_compatible_array<Array> = true>
     Q_DECL_CONSTEXPR QEmuStringView(const Array &str) Q_DECL_NOTHROW
         : QEmuStringView(str, lengthHelperArray(str)) {}
 
-    template <typename Pointer, if_compatible_pointer<Pointer> = true>
+template <typename Pointer, if_compatible_pointer<Pointer> = true>
     Q_DECL_CONSTEXPR QEmuStringView(const Pointer &str) Q_DECL_NOTHROW
         : QEmuStringView(str, str ? lengthHelperPointer(str) : 0) {}
 
-    template <typename String, if_compatible_qstring_like<String> = true>
+template <typename String, if_compatible_qstring_like<String> = true>
     inline Q_DECL_CONSTEXPR QEmuStringView(const String &str) Q_DECL_NOTHROW
         : QEmuStringView(str.isNull() ? nullptr : str.data(), qsizetype(str.size())) {}
-    template <typename StdBasicString, if_compatible_string<StdBasicString> = true>
+template <typename StdBasicString, if_compatible_string<StdBasicString> = true>
     QEmuStringView(const StdBasicString &str) Q_DECL_NOTHROW
         : QEmuStringView(str.data(), qsizetype(str.size())) {}
 
     inline QEmuStringView(const std::wstring str)
         : QString(QString::fromStdWString(str)) {}
     inline QEmuStringView(const wchar_t *str)
-        : QString(QString::fromStdWString(str)) {}
+        : QString(str ? QString::fromStdWString(str) : nullptr)
+        , m_hasData(true), m_data(str)
+    {
+        if (!str) {
+            m_isNull = true;
+        }
+    }
 
 
     inline bool empty() {return QString::size() == 0 ; }
@@ -294,6 +302,51 @@ public:
     {
         // detour via QStringRef::toString() which makes the required deep copy
         return QStringRef(this).toString();
+    }
+
+    inline QEmuStringView &operator=(const QString &other) Q_DECL_NOTHROW
+    {
+        *(static_cast<QString*>(this)) = other;
+        m_hasData = m_isNull = false;
+        m_data = nullptr;
+        return *this;
+    }
+    inline QEmuStringView &operator=(const QString *other) Q_DECL_NOTHROW
+    {
+        if (other) {
+            *(static_cast<QString*>(this)) = *other;
+            m_isNull = false;
+        } else {
+            QString::clear();
+            m_isNull = true;
+        }
+        m_hasData = false;
+        m_data = nullptr;
+        return *this;
+    }
+    Q_REQUIRED_RESULT const QChar operator[](qsizetype n) const
+    { return Q_ASSERT10(n >= 0), Q_ASSERT10(n < size()), at(n); }
+
+    inline const QChar *unicode() const
+    {
+        return m_isNull ? nullptr : QString::unicode();
+    }
+    inline const_pointer data() const
+    {
+        return m_isNull ? nullptr :
+            m_hasData ? static_cast<const_pointer>(m_data) : QString::data();
+    }
+    inline QChar *data()
+    {
+        // another nice hack to return a non-const version of m_data...
+        void** pp = const_cast<void**>(&m_data);
+        return m_isNull ? nullptr :
+            m_hasData ? static_cast<QChar*>(*pp) : QString::data();
+    }
+    inline const QChar *constData() const
+    {
+        return m_isNull ? nullptr :
+            m_hasData ? static_cast<const QChar*>(m_data) :QString::constData();
     }
 
     char *toPrettyUnicode() const
@@ -361,29 +414,15 @@ public:
         return buffer.take();
     }
 
-    inline QEmuStringView &operator=(const QString &other) Q_DECL_NOTHROW
-    {
-        *(static_cast<QString*>(this)) = other;
-        return *this;
-    }
-    inline QEmuStringView &operator=(const QString *other) Q_DECL_NOTHROW
-    {
-        *(static_cast<QString*>(this)) = *other;
-        return *this;
-    }
-    Q_REQUIRED_RESULT const QChar operator[](qsizetype n) const
-    { return Q_ASSERT10(n >= 0), Q_ASSERT10(n < size()), at(n); }
-
-//     inline operator QString() const
-//     {
-//         return toString();
-//     }
-
 private:
+
     static Q_DECL_CONSTEXPR inline char toHexUpper(uint value) Q_DECL_NOTHROW
     {
         return "0123456789ABCDEF"[value & 0xF];
     }
+    bool m_isNull = false;
+    bool m_hasData = false;
+    const void *m_data = nullptr;
 };
 
 template <typename Char, QEmuStringView::if_compatible_char<Char> = true>

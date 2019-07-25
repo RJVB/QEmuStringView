@@ -499,6 +499,10 @@ void TESTCLASS::fromLiteral(const Char *arg) const
     QCOMPARE(QStringView(null).size(), qsizetype(0));
     QCOMPARE(QStringView(null).data(), nullptr);
     QCOMPARE(QStringView(empty).size(), qsizetype(0));
+// #ifdef QSTRINGVIEW_EMULATE
+//     qWarning() << "empty=" << empty << "QStringView(empty).data()=" << QStringView(empty).data();
+//     QEXPECT_FAIL("", "Pointers are expected to differ in the next test, with QEmuStringView", Continue);
+// #endif
     QCOMPARE(static_cast<const void*>(QStringView(empty).data()),
              static_cast<const void*>(empty));
 
@@ -517,11 +521,19 @@ void TESTCLASS::fromRange(const Char *first, const Char *last) const
     QCOMPARE(QStringView(null, null).size(), 0);
     QCOMPARE(QStringView(null, null).data(), nullptr);
     QCOMPARE(QStringView(first, first).size(), 0);
+// #ifdef QSTRINGVIEW_EMULATE
+//     qWarning() << "first=" << first << "QStringView(first,first).data()=" << QStringView(first,first).data();
+//     QEXPECT_FAIL("", "Pointers are expected to differ in the next test, with QEmuStringView", Continue);
+// #endif
     QCOMPARE(static_cast<const void*>(QStringView(first, first).data()),
              static_cast<const void*>(first));
 
     const auto sv = QStringView(first, last);
     QCOMPARE(sv.size(), last - first);
+// #ifdef QSTRINGVIEW_EMULATE
+//     qWarning() << "first=" << first << "QStringView(first,last).data()=" << QStringView(sv).data();
+//     QEXPECT_FAIL("", "Pointers are expected to differ in the next test, with QEmuStringView", Continue);
+// #endif
     QCOMPARE(static_cast<const void*>(sv.data()),
              static_cast<const void*>(first));
 
