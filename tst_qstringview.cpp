@@ -36,9 +36,6 @@
 
 #include <string>
 
-#ifndef QSTRINGVIEW_H
-#define QSTRINGVIEW_EMULATE
-#endif
 #include "qemustringview.h"
 
 #ifdef QSTRINGVIEW_EMULATE

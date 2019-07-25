@@ -45,8 +45,10 @@
 
 #include <QString>
 
-#ifdef QSTRINGVIEW_H
-#warning "Your Qt install already has the QStringView class!"
+#if defined(QSTRINGVIEW_H) && defined(QSTRINGVIEW_EMULATE)
+#warning "QEmuStringView will override Qt's QStringView class!"
+#elif !defined(QSTRINGVIEW_H) && !defined(QSTRINGVIEW_EMULATE)
+#warning "#define QSTRINGVIEW_EMULATE to emulate QStringView with QEmuStringView"
 #endif
 
 #ifdef __SSE2__
